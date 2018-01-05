@@ -305,10 +305,12 @@ class GenNeuron(object):
         return self
 
     def next(self):
-        if self.i < (len(self.segs)):
+        if not hasattr(self, 'i'):
+            self.i = 0
+        if self.i < (len(self.all_secs)):
             i = self.i
             self.i += 1
-            return self.all_sections[i]
+            return self.all_secs[i]
         else:
             self.i = 0
             raise StopIteration()

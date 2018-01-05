@@ -310,7 +310,7 @@ class Population(object):
         return self.cells[item]
     
     def __str__(self):
-        return str(self.get_cell_number) + ' x' + str(self.cell_type) 
+        return str(self.get_cell_number()) + ' x' + str(self.cell_type) 
 
     def next(self):
         if self.i < (len(self.cells)):
@@ -453,7 +453,7 @@ class PerforantPathStimulation(object):
         post_pop.add_connection(self)
         synapses = []
         netcons = []
-        
+
         if type(n_targets) == int:
             # Select n_targets from post_pop
             target_cells = np.random.choice(post_pop.cells, n_targets, replace = False)
@@ -488,15 +488,13 @@ class PerforantPathPoissonStimulation(object):
         post_pop.add_connection(self)
         synapses = []
         netcons = []
-        
+
         target_cells = post_pop.cells[spat_pattern]
-        
-        pattern = np.random.poisson(10,3).cumsum()
-        
+
         self.vecstim = h.VecStim()
         self.pattern_vec = h.Vector(t_pattern)
         self.vecstim.play(self.pattern_vec)
-        
+
         for curr_cell in target_cells:
             curr_seg_pool = curr_cell.get_segs_by_name(target_segs)
             for seg in curr_seg_pool:
@@ -508,8 +506,8 @@ class PerforantPathPoissonStimulation(object):
                 curr_netcon.weight[0] = weight
                 netcons.append(curr_netcon)
                 synapses.append(curr_syn)
-                for event in pattern:
-                    curr_netcon.event(event)
+                """for event in pattern:
+                    curr_netcon.event(event)"""
                     
         self.netcons = netcons
         self.pre_cell_targets = np.array(target_cells)
