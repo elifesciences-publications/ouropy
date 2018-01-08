@@ -308,7 +308,7 @@ class Population(object):
 
     def __getitem__(self, item):
         return self.cells[item]
-    
+
     def __str__(self):
         return str(self.get_cell_number()) + ' x' + str(self.cell_type) 
 
