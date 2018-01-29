@@ -250,6 +250,7 @@ class Population(object):
         self.cells = np.array(self.cells, dtype=object)
 
     def get_cell_number(self):
+        """Return the number of cells"""
         return len(self.cells)
 
     def record_aps(self):
@@ -276,10 +277,21 @@ class Population(object):
         ap_list = [x[0].as_numpy() for x in self.ap_counters]
         np.savez(path, *ap_list)
 
-    def current_clamp_rnd(self, n_cells, amp=0.3, dur=5, delay=3):
-        """
+    def mk_current_clamp(self, cells, amp=0.3, dur=5, delays=3):
+        if not hasattr(cells, '__iter__'):
+            cells = np.random.choice(self.get_cell_number(), cells,
+                                     replace=False)
 
-        """
+        if not hasattr(delays, '__iter__'):
+            delays = np.array(delays)
+
+        for cell in cells:
+            for delay in delays:
+                self.cells[cell]._current_clamp_soma(amp=amp, dur=dur,
+                                                     delay=delay)
+
+    def current_clamp_rnd(self, n_cells, amp=0.3, dur=5, delay=3):
+        """DEPRECATE"""
         chosen_cells = np.random.choice(self.cells, n_cells, replace=False)
 
         for x in chosen_cells:
@@ -289,6 +301,7 @@ class Population(object):
         return chosen_cells
 
     def current_clamp_range(self, n_cells, amp=0.3, dur=5, delay=3):
+        """DEPRECATE"""
         if type(n_cells) == int:
             n_cells = range(n_cells)
 
@@ -329,6 +342,59 @@ class Connection(object):
     def convergence_avg(self):
         pass
 """
+
+class tmgsynConnection(object):
+    
+    def __init__(self, pre_pop, post_pop, target_pool, target_segs, divergence,
+             tau1, tau2, e, thr, delay, weight):
+        """
+        divergence,
+                 tau1, tau2, e, g_max, thr, delay, weight, name = "GC->MC"
+        """
+        self.pre_pop = pre_pop
+        self.post_pop = post_pop
+        pre_pop.add_connection(self)
+        post_pop.add_connection(self)
+        pre_pop_rad = (np.arange(pre_pop.get_cell_number(),dtype=float) / pre_pop.get_cell_number()) * (2*np.pi)
+        post_pop_rad = (np.arange(post_pop.get_cell_number(), dtype=float) / post_pop.get_cell_number()) * (2*np.pi)
+        
+        pre_pop_pos = pos(pre_pop_rad)
+        post_pop_pos = pos(post_pop_rad)
+        pre_cell_target = []
+        synapses = []
+        netcons = []
+    
+        for idx, curr_cell_pos in enumerate(pre_pop_pos):
+    
+            curr_dist = []
+            for post_cell_pos in post_pop_pos:
+                curr_dist.append(euclidian_dist(curr_cell_pos,post_cell_pos))
+                
+            sort_idc = np.argsort(curr_dist)
+            closest_cells = sort_idc[0:target_pool]
+            picked_cells = np.random.choice(closest_cells, divergence, replace = False)
+            pre_cell_target.append(picked_cells)
+            for target_cell in picked_cells:
+                
+                curr_syns = []
+                curr_netcons = []
+    
+                curr_seg_pool = post_pop[target_cell].get_segs_by_name(target_segs)
+                chosen_seg = np.random.choice(curr_seg_pool)
+                for seg in chosen_seg:
+                    curr_syn = h.tmgsyn(chosen_seg(0.5))
+                    curr_syn.tau1 = tau1
+                    curr_syn.tau2 = tau2
+                    curr_syn.e = e
+                    curr_syns.append(curr_syn)
+                    curr_netcon = h.NetCon(pre_pop[idx].soma(0.5)._ref_v, curr_syn, thr, delay, weight, sec = pre_pop[idx].soma)
+                    curr_netcons.append(curr_netcon)
+                    netcons.append(curr_netcons)
+                    synapses.append(curr_syns)
+    
+        self.netcons = netcons
+        self.pre_cell_targets = np.array(pre_cell_target)
+        self.synapses = synapses
 
 class Exp2SynConnection(object):
     """
