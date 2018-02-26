@@ -294,7 +294,15 @@ class GenNeuron(object):
             delay = (idx * stim_interval) + start
             self._current_clamp_soma(amp=x, dur=stim_dur, delay=delay)
 
-    def _vclamp(self,dur1=200, amp1=0, rs=0.001):
+    def _vclamp(self, dur1=200, amp1=0, rs=0.001):
+        """DEPRECATE"""
+        self.vclamp = h.SEClamp(self.soma(0.5))
+        self.vclamp.dur1 = dur1
+        self.vclamp.amp1 = amp1
+        self.vclamp.rs = rs
+        return self.vclamp
+
+    def _SEClamp(self, dur1=200, amp1=0, rs=0.001):
         self.vclamp = h.SEClamp(self.soma(0.5))
         self.vclamp.dur1 = dur1
         self.vclamp.amp1 = amp1
