@@ -271,7 +271,7 @@ class Population(object):
         if not np.array(cells[0]).any():
             cells[0] = np.array([0], dtype=float)
 
-        plt.eventplot(cells, linewidth=2)
+        plt.eventplot(cells, linewidth=2, color = 'k')
 
     def write_aps(self, path):
         ap_list = [x[0].as_numpy() for x in self.ap_counters]
