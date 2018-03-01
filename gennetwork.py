@@ -126,6 +126,15 @@ class GenNetwork(object):
                                 pre_pop, post_pop, target_pool, target_segs,
                                 divergence, tau1, tau2, e, thr, delay, weight))
 
+    def mk_tmgsynConnection(self,pre_pop, post_pop, target_pool, targets_seg,
+                            divergence, tau_1, tau_facil, U, tau_rec, e, thr, delay, weight):
+        """Create a connection with tmgsyn as published by Tsodyks, Pawelzik & Markram, 1998.
+        The tmgsyn is a dynamic three state implicit resource synapse model.
+        The response onset is instantaneous and the decay is exponential.
+        """
+        pass
+
+
     def mk_PerforantPathStimulation(self, stim, post_pop, n_targets,
                                     target_segs, tau1, tau2, e,
                                     thr, delay, weight):
@@ -345,8 +354,8 @@ class Connection(object):
 
 class tmgsynConnection(object):
     
-    def __init__(self, pre_pop, post_pop, target_pool, target_segs, divergence,
-             tau1, tau2, e, thr, delay, weight):
+    def __init__(self,pre_pop, post_pop, target_pool, targets_seg,
+                divergence, tau_1, tau_facil, U, tau_rec, e, thr, delay, weight):
         """
         divergence,
                  tau1, tau2, e, g_max, thr, delay, weight, name = "GC->MC"
@@ -383,9 +392,11 @@ class tmgsynConnection(object):
                 chosen_seg = np.random.choice(curr_seg_pool)
                 for seg in chosen_seg:
                     curr_syn = h.tmgsyn(chosen_seg(0.5))
-                    curr_syn.tau1 = tau1
-                    curr_syn.tau2 = tau2
+                    curr_syn.tau_1 = tau_1
+                    curr_syn.tau_facil = tau_facil
+                    curr_syn.U = U
                     curr_syn.e = e
+                    curr_syn.tau_rec = tau_rec
                     curr_syns.append(curr_syn)
                     curr_netcon = h.NetCon(pre_pop[idx].soma(0.5)._ref_v, curr_syn, thr, delay, weight, sec = pre_pop[idx].soma)
                     curr_netcons.append(curr_netcon)
