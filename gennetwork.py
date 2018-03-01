@@ -261,7 +261,7 @@ class Population(object):
         self.ap_counters = counters
         return counters
 
-    def plot_aps(self):
+    def plot_aps(self, color = 'k'):
         cells = []
         for x in self.ap_counters:
             cells.append(x[0].as_numpy())
@@ -271,7 +271,7 @@ class Population(object):
         if not np.array(cells[0]).any():
             cells[0] = np.array([0], dtype=float)
 
-        plt.eventplot(cells, linewidth=2, color = 'k')
+        plt.eventplot(cells, linewidth=2, color = color)
 
     def write_aps(self, path):
         ap_list = [x[0].as_numpy() for x in self.ap_counters]
