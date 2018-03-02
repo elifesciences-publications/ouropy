@@ -132,8 +132,11 @@ class GenNetwork(object):
         The tmgsyn is a dynamic three state implicit resource synapse model.
         The response onset is instantaneous and the decay is exponential.
         """
-        pass
+        if not hasattr(self, 'connections'):
+            self.connections = []
 
+        self.connections.append(tmgsynConnection(self,pre_pop, post_pop, target_pool, targets_seg,
+                                                 divergence, tau_1, tau_facil, U, tau_rec, e, thr, delay, weight))
 
     def mk_PerforantPathStimulation(self, stim, post_pop, n_targets,
                                     target_segs, tau1, tau2, e,
@@ -149,7 +152,7 @@ class GenNetwork(object):
                 tau1, tau2, e, weight):
         if not hasattr(self, 'connections'):
             self.connections = []
-        
+
         self.connections.append(PerforantPathPoissonStimulation(post_pop, t_pattern, spat_pattern, target_segs,
                 tau1, tau2, e, weight))
 
@@ -354,11 +357,64 @@ class Connection(object):
 
 class tmgsynConnection(object):
     
-    def __init__(self,pre_pop, post_pop, target_pool, targets_seg,
+    def __init__(self, pre_pop, post_pop, target_pool, target_segs,
                 divergence, tau_1, tau_facil, U, tau_rec, e, thr, delay, weight):
-        """
-        divergence,
-                 tau1, tau2, e, g_max, thr, delay, weight, name = "GC->MC"
+        """Create a connection with tmgsyn as published by Tsodyks, Pawelzik &
+        Markram, 1998.
+        The tmgsyn is a dynamic three state implicit resource synapse model.
+        The response onset is instantaneous and the decay is exponential.
+        It combines a frequency dependent depression and a facilitation
+        mechanism that both depend on independent time constants.
+        The synaptic targets are chosen by proximity, that is the target pool
+        are the cells in closest proximity.
+
+        Parameters
+        ----------
+        pre_pop - gennetwork.Population
+            The presynaptic population
+        post_pop - gennetwork.Population
+            the postsynaptic population
+        target_pool - int
+            the number of cells in the target pool
+        target_segs - str
+            the name of the segments that are possible synaptic targets at the
+            postsynaptic population
+        divergence - int
+            divergence in absolute terms, that is the number of synapses each
+            presynaptic cell forms
+        tau_1 - numeric
+            the time constant of synaptic decay. conforms to the transition
+            from the active to the inactive resource state. units of time as in
+            neuron standard units
+        tau_facil - numeric
+            the time constant of facilitation decay. this essentially creates
+            the frequency dependence. set to 0 for no facilitation.
+        U - numeric
+            maximum of postsynaptic response. has to be considered together
+            with the weight from the netcon.
+        tau_rec - numeric
+            time constant of recovery from inactive for recovered state.
+            gives depression since inactive resources do not contribute to
+            postsynaptic signal. set to 0 for no depression.
+        e - numeric
+            equilibrium potential of the postsynaptic conductance
+        thr - numeric
+            threshold for synaptic event at the presynaptic source
+        delay - numeric
+            delay between presynaptic signal and onset of postsynaptic signal
+        weight - numeric
+            weight for the netcon object connecting source and target
+
+        Returns
+        -------
+        None
+
+        Use Cases
+        ---------
+        >>> tmgsynConnection(nw.population[0], nw.population[1],
+                             3, 'prox', 1, 6.0, 0, 0.04, 0, 0, 10, 3, 0)
+        A non-facilitating, non-depressing excitatory connection.
+
         """
         self.pre_pop = pre_pop
         self.post_pop = post_pop
@@ -366,7 +422,7 @@ class tmgsynConnection(object):
         post_pop.add_connection(self)
         pre_pop_rad = (np.arange(pre_pop.get_cell_number(),dtype=float) / pre_pop.get_cell_number()) * (2*np.pi)
         post_pop_rad = (np.arange(post_pop.get_cell_number(), dtype=float) / post_pop.get_cell_number()) * (2*np.pi)
-        
+
         pre_pop_pos = pos(pre_pop_rad)
         post_pop_pos = pos(post_pop_rad)
         pre_cell_target = []
@@ -387,11 +443,11 @@ class tmgsynConnection(object):
                 
                 curr_syns = []
                 curr_netcons = []
-    
+
                 curr_seg_pool = post_pop[target_cell].get_segs_by_name(target_segs)
                 chosen_seg = np.random.choice(curr_seg_pool)
                 for seg in chosen_seg:
-                    curr_syn = h.tmgsyn(chosen_seg(0.5))
+                    curr_syn = h.tmgsyn(seg(0.5))
                     curr_syn.tau_1 = tau_1
                     curr_syn.tau_facil = tau_facil
                     curr_syn.U = U
