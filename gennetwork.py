@@ -447,7 +447,7 @@ class tmgsynConnection(object):
                 curr_seg_pool = post_pop[target_cell].get_segs_by_name(target_segs)
                 chosen_seg = np.random.choice(curr_seg_pool)
                 for seg in chosen_seg:
-                    curr_syn = h.tmgsyn(seg(0.5))
+                    curr_syn = h.tmgsyn(chosen_seg(0.5))
                     curr_syn.tau_1 = tau_1
                     curr_syn.tau_facil = tau_facil
                     curr_syn.U = U
