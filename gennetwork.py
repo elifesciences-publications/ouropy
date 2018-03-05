@@ -645,6 +645,8 @@ class PerforantPathPoissonStimulation(object):
         self.netcons = netcons
         self.pre_cell_targets = np.array(target_cells)
         self.synapses = synapses
+        
+
 
 """HELPERS"""
 def pos(rad):
