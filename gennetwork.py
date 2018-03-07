@@ -11,6 +11,8 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+import time
+import os
 
 
 class GenNetwork(object):
@@ -75,6 +77,9 @@ class GenNetwork(object):
 
         for idx, cell_type in enumerate(celltypes):
             self.populations.append(Population(cell_type, cellnums[idx], self))
+    def get_header(self):
+        header = {'}
+        return header
 
     def mk_population(self, cell_type, n_cells):
         """Initialize instance empty or with cell populations.
@@ -175,6 +180,13 @@ class GenNetwork(object):
         h.tstop = tstop
         h.run()
 
+    def write_network_data(self, directory = ''):
+        """
+        Writes the spike counters
+        """
+        for pop in self.populations:
+            pop.write_aps(directory=directory)
+
 
 class Population(object):
     """This is the model of a generic population.
@@ -273,7 +285,7 @@ class Population(object):
         self.ap_counters = counters
         return counters
 
-    def plot_aps(self, color = 'k'):
+    def plot_aps(self, color='k'):
         cells = []
         for x in self.ap_counters:
             cells.append(x[0].as_numpy())
@@ -283,11 +295,33 @@ class Population(object):
         if not np.array(cells[0]).any():
             cells[0] = np.array([0], dtype=float)
 
-        plt.eventplot(cells, linewidth=2, color = color)
+        plt.eventplot(cells, linewidth=2, color=color)
 
-    def write_aps(self, path):
+    def write_aps(self, directory='', fname=''):
+        if not fname:
+            time_tup = time.gmtime()
+            time_str = time.asctime(time_tup)
+            time_str = '_'.join(time_str.split(' '))
+            nw_name = self.parent_network.__class__.name
+            pop_name = self.cell_type.name
+            fname = nw_name + '_' + pop_name + '_' + time_str
+            fname = fname.replace(':', '-')
+        if not directory:
+            directory = os.getcwd()
+        if not os.path.isdir(directory):
+            os.mkdir(directory)
+        path = directory + '\\' + fname + '.npz'
         ap_list = [x[0].as_numpy() for x in self.ap_counters]
         np.savez(path, *ap_list)
+
+    def perc_active_cells(self):
+        timing_arrays = [x[0].as_numpy() for x in self.ap_counters]
+        active_counter = 0
+        for x in timing_arrays:
+            if x.size != 0:
+                active_counter = active_counter + 1
+
+        return (active_counter / float(self.get_cell_number())) * 100
 
     def mk_current_clamp(self, cells, amp=0.3, dur=5, delays=3):
         if not hasattr(cells, '__iter__'):
@@ -335,7 +369,7 @@ class Population(object):
         return self.cells[item]
 
     def __str__(self):
-        return str(self.get_cell_number()) + ' x' + str(self.cell_type) 
+        return str(self.get_cell_number()) + ' x' + str(self.cell_type)
 
     def next(self):
         if self.i < (len(self.cells)):
@@ -346,17 +380,8 @@ class Population(object):
             self.i = 0
             raise StopIteration()
 
-"""
-class Connection(object):
-    def __str__(self):
-        return str(self.pre_pop) + ' to ' + str(self.post_pop)
-
-    def convergence_avg(self):
-        pass
-"""
-
 class tmgsynConnection(object):
-    
+
     def __init__(self, pre_pop, post_pop, target_pool, target_segs,
                 divergence, tau_1, tau_facil, U, tau_rec, e, thr, delay, weight):
         """Create a connection with tmgsyn as published by Tsodyks, Pawelzik &
@@ -592,7 +617,7 @@ class PerforantPathStimulation(object):
             target_cells = np.random.choice(post_pop.cells, n_targets, replace = False)
         else:
             target_cells = post_pop.cells[n_targets]
-        
+
         for curr_cell in target_cells:
             curr_seg_pool = curr_cell.get_segs_by_name(target_segs)
             for seg in curr_seg_pool:
@@ -645,7 +670,42 @@ class PerforantPathPoissonStimulation(object):
         self.netcons = netcons
         self.pre_cell_targets = np.array(target_cells)
         self.synapses = synapses
+
+class PerforantPathPoissonTmgsyn(object):
+    """
+    Patterned Perforant Path simulation as in Yim et al. 2015.
+    uses vecevent.mod -> h.VecStim
+    """
+    def __init__(self, post_pop, t_pattern, spat_pattern, target_segs,
+                 tau_1, tau_facil, U, tau_rec, e, weight):
         
+        post_pop.add_connection(self)
+        synapses = []
+        netcons = []
+
+        target_cells = post_pop.cells[spat_pattern]
+
+        self.vecstim = h.VecStim()
+        self.pattern_vec = h.Vector(t_pattern)
+        self.vecstim.play(self.pattern_vec)
+
+        for curr_cell in target_cells:
+            curr_seg_pool = curr_cell.get_segs_by_name(target_segs)
+            for seg in curr_seg_pool:
+                curr_syn = h.tmgsyn(seg(0.5))
+                curr_syn.tau_1 = tau_1
+                curr_syn.tau_facil = tau_facil
+                curr_syn.U = U
+                curr_syn.tau_rec = tau_rec
+                curr_syn.e = e
+                curr_netcon = h.NetCon(self.vecstim, curr_syn)
+                curr_netcon.weight[0] = weight
+                netcons.append(curr_netcon)
+                synapses.append(curr_syn)
+
+        self.netcons = netcons
+        self.pre_cell_targets = np.array(target_cells)
+        self.synapses = synapses
 
 
 """HELPERS"""
