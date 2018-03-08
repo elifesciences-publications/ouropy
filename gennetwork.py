@@ -77,8 +77,21 @@ class GenNetwork(object):
 
         for idx, cell_type in enumerate(celltypes):
             self.populations.append(Population(cell_type, cellnums[idx], self))
+
     def get_header(self):
-        header = {'}
+        population_types = ' '.join([x.cell_type.name for x in self.populations])
+        cell_numbers = ' '.join([str(x.get_cell_number()) for x in self.populations])
+        connection_n = 0
+        connections = {}
+        for pop in self.populations:
+            for conn in pop.connections:
+                name = conn.get_name()
+                connections[name] = conn.pre_cell_targets
+                connection_n = connection_n + 1
+        header = {'population_types': population_types,
+                  'cell_numbers': cell_numbers,
+                  'number_connections': connection_n,
+                  'connections': connections}
         return header
 
     def mk_population(self, cell_type, n_cells):
@@ -105,25 +118,7 @@ class GenNetwork(object):
 
     def mk_Exp2SynConnection(self, pre_pop, post_pop, target_pool, target_segs,
                              divergence, tau1, tau2, e, thr, delay, weight):
-        """Initialize instance empty or with cell populations.
-        See gennetwork.Population for detailed implementation of Population.
-
-        Parameters
-        ----------
-        celltypes - sequence of GenNeuron instances or subclasses thereof
-            the threshold value for action potential detection
-        cellnums - numeric sequence
-            specifies number of neurons per population. same len as celltypes
-
-        Returns
-        -------
-        self
-
-        Use Cases
-        ---------
-        >>> GenNetwork([GranuleCell, MossyCell], [500,15])
-        Create a network with 500 granule cells and 15 mossy cells.
-        """
+        """DEPRECATE"""
         if not hasattr(self, 'connections'):
             self.connections = []
 
@@ -133,10 +128,7 @@ class GenNetwork(object):
 
     def mk_tmgsynConnection(self,pre_pop, post_pop, target_pool, targets_seg,
                             divergence, tau_1, tau_facil, U, tau_rec, e, thr, delay, weight):
-        """Create a connection with tmgsyn as published by Tsodyks, Pawelzik & Markram, 1998.
-        The tmgsyn is a dynamic three state implicit resource synapse model.
-        The response onset is instantaneous and the decay is exponential.
-        """
+        """DEPRECATE"""
         if not hasattr(self, 'connections'):
             self.connections = []
 
@@ -146,6 +138,7 @@ class GenNetwork(object):
     def mk_PerforantPathStimulation(self, stim, post_pop, n_targets,
                                     target_segs, tau1, tau2, e,
                                     thr, delay, weight):
+        """DEPRECATE"""
         if not hasattr(self, 'connections'):
             self.connections = []
 
@@ -155,6 +148,7 @@ class GenNetwork(object):
 
     def mk_PerforantPathPoissonStimulation(self,post_pop, t_pattern, spat_pattern, target_segs,
                 tau1, tau2, e, weight):
+        """DEPRECATE"""
         if not hasattr(self, 'connections'):
             self.connections = []
 
@@ -277,6 +271,8 @@ class Population(object):
         """Return the number of cells"""
         return len(self.cells)
 
+    
+
     def record_aps(self):
         counters = []
         for cell in self.cells:
@@ -362,14 +358,14 @@ class Population(object):
     def add_connection(self, conn):
         self.connections.append(conn)
 
+    def __str__(self):
+        return self.cell_type.name + 'Population'
+
     def __iter__(self):
         return self
 
     def __getitem__(self, item):
         return self.cells[item]
-
-    def __str__(self):
-        return str(self.get_cell_number()) + ' x' + str(self.cell_type)
 
     def next(self):
         if self.i < (len(self.cells)):
@@ -380,7 +376,21 @@ class Population(object):
             self.i = 0
             raise StopIteration()
 
-class tmgsynConnection(object):
+class GenConnection(object):
+    def __init__(self):
+        pass
+    def get_description(self):
+        """Return a descriptive string for the connection"""
+        name = self.pre_pop.name + ' to ' + self.post_pop.name + '\n'
+        pre_cell_targets = '\n'.join([str(x) for x in self.pre_cell_targets])
+        return name + pre_cell_targets
+    def get_name(self):
+        if type(self.pre_pop) == str:
+            return self.pre_pop + ' to ' + str(self.post_pop) + '\n'
+        else:
+            return str(self.pre_pop) + ' to ' + str(self.post_pop) + '\n'
+
+class tmgsynConnection(GenConnection):
 
     def __init__(self, pre_pop, post_pop, target_pool, target_segs,
                 divergence, tau_1, tau_facil, U, tau_rec, e, thr, delay, weight):
@@ -488,7 +498,7 @@ class tmgsynConnection(object):
         self.pre_cell_targets = np.array(pre_cell_target)
         self.synapses = synapses
 
-class Exp2SynConnection(object):
+class Exp2SynConnection(GenConnection):
     """
     This class connects a pre and a post synaptic population with a Exp2Syn
     synapse.
@@ -648,7 +658,7 @@ class PerforantPathPoissonStimulation(object):
         netcons = []
 
         target_cells = post_pop.cells[spat_pattern]
-
+        self.pre_pop = "Implicit"
         self.vecstim = h.VecStim()
         self.pattern_vec = h.Vector(t_pattern)
         self.vecstim.play(self.pattern_vec)
@@ -671,7 +681,7 @@ class PerforantPathPoissonStimulation(object):
         self.pre_cell_targets = np.array(target_cells)
         self.synapses = synapses
 
-class PerforantPathPoissonTmgsyn(object):
+class PerforantPathPoissonTmgsyn(GenConnection):
     """
     Patterned Perforant Path simulation as in Yim et al. 2015.
     uses vecevent.mod -> h.VecStim
@@ -683,8 +693,9 @@ class PerforantPathPoissonTmgsyn(object):
         synapses = []
         netcons = []
 
-        target_cells = post_pop.cells[spat_pattern]
-
+        target_cells = spat_pattern
+        self.pre_pop = 'Implicit'
+        self.post_pop = post_pop
         self.vecstim = h.VecStim()
         self.pattern_vec = h.Vector(t_pattern)
         self.vecstim.play(self.pattern_vec)
