@@ -116,45 +116,6 @@ class GenNetwork(object):
 
         self.populations.append(Population(cell_type, n_cells, self))
 
-    def mk_Exp2SynConnection(self, pre_pop, post_pop, target_pool, target_segs,
-                             divergence, tau1, tau2, e, thr, delay, weight):
-        """DEPRECATE"""
-        if not hasattr(self, 'connections'):
-            self.connections = []
-
-        self.connections.append(Exp2SynConnection(
-                                pre_pop, post_pop, target_pool, target_segs,
-                                divergence, tau1, tau2, e, thr, delay, weight))
-
-    def mk_tmgsynConnection(self,pre_pop, post_pop, target_pool, targets_seg,
-                            divergence, tau_1, tau_facil, U, tau_rec, e, thr, delay, weight):
-        """DEPRECATE"""
-        if not hasattr(self, 'connections'):
-            self.connections = []
-
-        self.connections.append(tmgsynConnection(self,pre_pop, post_pop, target_pool, targets_seg,
-                                                 divergence, tau_1, tau_facil, U, tau_rec, e, thr, delay, weight))
-
-    def mk_PerforantPathStimulation(self, stim, post_pop, n_targets,
-                                    target_segs, tau1, tau2, e,
-                                    thr, delay, weight):
-        """DEPRECATE"""
-        if not hasattr(self, 'connections'):
-            self.connections = []
-
-        self.connections.append(PerforantPathStimulation(stim,
-                                post_pop, n_targets, target_segs,
-                                tau1, tau2, e, thr, delay, weight))
-
-    def mk_PerforantPathPoissonStimulation(self,post_pop, t_pattern, spat_pattern, target_segs,
-                tau1, tau2, e, weight):
-        """DEPRECATE"""
-        if not hasattr(self, 'connections'):
-            self.connections = []
-
-        self.connections.append(PerforantPathPoissonStimulation(post_pop, t_pattern, spat_pattern, target_segs,
-                tau1, tau2, e, weight))
-
     def voltage_recording(self, cell_type):
         rnd_int = random.randint(0, len(self.cells[cell_type]) - 1)
         soma_v_vec, t_vec = self.cells[cell_type][rnd_int]._voltage_recording()
@@ -389,6 +350,11 @@ class GenConnection(object):
             return self.pre_pop + ' to ' + str(self.post_pop) + '\n'
         else:
             return str(self.pre_pop) + ' to ' + str(self.post_pop) + '\n'
+    def get_properties(self):
+        properties = {'name': self.get_name(),
+                      'init_parameters': self.init_parameters,
+                      'pre_cell_targets': self.pre_cell_targets}
+        return {self: properties}
 
 class tmgsynConnection(GenConnection):
 
@@ -451,6 +417,7 @@ class tmgsynConnection(GenConnection):
         A non-facilitating, non-depressing excitatory connection.
 
         """
+        self.init_parameters = locals()
         self.pre_pop = pre_pop
         self.post_pop = post_pop
         pre_pop.add_connection(self)
@@ -510,6 +477,7 @@ class Exp2SynConnection(GenConnection):
         divergence,
                  tau1, tau2, e, g_max, thr, delay, weight, name = "GC->MC"
                  """
+        self.init_parameters = locals()
         self.pre_pop = pre_pop
         self.post_pop = post_pop
         pre_pop.add_connection(self)
@@ -534,7 +502,6 @@ class Exp2SynConnection(GenConnection):
             picked_cells = np.random.choice(closest_cells, divergence, replace = False)
             pre_cell_target.append(picked_cells)
             for target_cell in picked_cells:
-                
                 curr_syns = []
                 curr_netcons = []
 
@@ -688,12 +655,13 @@ class PerforantPathPoissonTmgsyn(GenConnection):
     """
     def __init__(self, post_pop, t_pattern, spat_pattern, target_segs,
                  tau_1, tau_facil, U, tau_rec, e, weight):
-        
+
+        self.init_parameters = locals()
         post_pop.add_connection(self)
         synapses = []
         netcons = []
 
-        target_cells = spat_pattern
+        target_cells = post_pop[spat_pattern]
         self.pre_pop = 'Implicit'
         self.post_pop = post_pop
         self.vecstim = h.VecStim()
@@ -715,7 +683,7 @@ class PerforantPathPoissonTmgsyn(GenConnection):
                 synapses.append(curr_syn)
 
         self.netcons = netcons
-        self.pre_cell_targets = np.array(target_cells)
+        self.pre_cell_targets = np.array(spat_pattern)
         self.synapses = synapses
 
 
