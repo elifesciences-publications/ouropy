@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import math
 import time
 import os
+import shelve
 
 
 class GenNetwork(object):
@@ -66,7 +67,7 @@ class GenNetwork(object):
         >>> GenNetwork([GranuleCell, MossyCell], [500,15])
         Create a network with 500 granule cells and 15 mossy cells.
         """
-
+        
         self.populations = []
         self.connections = []
         if celltypes is None:
@@ -78,21 +79,10 @@ class GenNetwork(object):
         for idx, cell_type in enumerate(celltypes):
             self.populations.append(Population(cell_type, cellnums[idx], self))
 
-    def get_header(self):
-        population_types = ' '.join([x.cell_type.name for x in self.populations])
-        cell_numbers = ' '.join([str(x.get_cell_number()) for x in self.populations])
-        connection_n = 0
-        connections = {}
-        for pop in self.populations:
-            for conn in pop.connections:
-                name = conn.get_name()
-                connections[name] = conn.pre_cell_targets
-                connection_n = connection_n + 1
-        header = {'population_types': population_types,
-                  'cell_numbers': cell_numbers,
-                  'number_connections': connection_n,
-                  'connections': connections}
-        return header
+    def get_properties(self):
+        properties = {'populations': [x.get_properties() for x in self.populations],
+                      'init_params': self.init_params}
+        return properties
 
     def mk_population(self, cell_type, n_cells):
         """Initialize instance empty or with cell populations.
@@ -135,12 +125,38 @@ class GenNetwork(object):
         h.tstop = tstop
         h.run()
 
-    def write_network_data(self, directory = ''):
+    def write_network_data(self, directory=''):
         """
         Writes the spike counters
         """
         for pop in self.populations:
             pop.write_aps(directory=directory)
+            
+    def shelve_network(self, directory=None, file_name=None):
+        """Saves the complete network information to a python shelve file.
+        Goes down from the network to populations to connections and uses their
+        get_properties() methods to extract all the information.
+        """
+        if not directory:
+            directory = os.getcwd()
+        if not file_name:
+            local_time_as_string = '_'.join(time.asctime(time.localtime()).split(' '))
+            file_name = str(self) + '_' + local_time_as_string
+        if not os.path.isdir(directory):
+            os.mkdir(directory)
+        
+        full_file_path = directory + "\\" + file_name
+        if os.path.isfile(full_file_path):
+            raise ValueError("The file already exists.\n" + 
+                             "shelve_network does not overwrite files.")
+        
+        curr_shelve = shelve.open(full_file_path, flag ='n')
+        curr_shelve[str(self)] = self.get_properties()
+        curr_shelve.close()
+        return 1
+
+    def __str__(self):
+        return str(self.__class__).split("'")[1]
 
 
 class Population(object):
@@ -184,14 +200,25 @@ class Population(object):
     """
 
     def __init__(self, cell_type=None, n_cells=None, parent_network=None):
-
         self.parent_network = parent_network
         self.cell_type = cell_type
         self.cells = []
         self.connections = []
+        self.VClamps = []
+        self.VRecords = []
         if cell_type and n_cells:
             self.make_cells(cell_type, n_cells)
         self.i = 0
+
+    def SEClamp(self, cells, dur1=200, amp1=0, rs=0.001):
+        for x in cells:
+            clamp = self.cells[x]._SEClamp(dur1=dur1, amp1=amp1, rs=rs)
+            self.VClamps.append(clamp)
+
+    def voltage_recording(self, cells):
+        for x in cells:
+            record = self.cells[x]._voltage_recording()
+            self.VRecords.append(record)
 
     def make_cells(self, cell_type, n_cells):
         """Create cells of a certain type
@@ -231,8 +258,6 @@ class Population(object):
     def get_cell_number(self):
         """Return the number of cells"""
         return len(self.cells)
-
-    
 
     def record_aps(self):
         counters = []
@@ -311,13 +336,28 @@ class Population(object):
         for cell in n_cells:
             self.cells[cell]._current_clamp_soma(amp=amp, dur=dur, delay=delay)
 
-    def voltage_recording(self, cell_type):
+    """def voltage_recording(self, cell_type):
         rnd_int = random.randint(0, len(self.cells) - 1)
         soma_v_vec = self.cells[rnd_int]._voltage_recording()
-        return soma_v_vec
+        return soma_v_vec"""
 
     def add_connection(self, conn):
         self.connections.append(conn)
+
+    def get_properties(self):
+        """Get the properties of the network"""
+        ap_time_stamps = [x[0].as_numpy() for x in self.ap_counters]
+        ap_numbers = [x[1].n for x in self.ap_counters]
+        properties = {'parent_network': str(self.parent_network),
+                      'cell_type': self.cell_type.name,
+                      'cell_number': self.get_cell_number(),
+                      'connections': [conn.get_properties() for conn in self.connections],
+                      'ap_time_stamps': ap_time_stamps,
+                      'ap_number': ap_numbers,
+                      'v_records': [x.as_numpy() for x in self.VRecords]}
+
+        properties
+        return properties
 
     def __str__(self):
         return self.cell_type.name + 'Population'
@@ -347,14 +387,21 @@ class GenConnection(object):
         return name + pre_cell_targets
     def get_name(self):
         if type(self.pre_pop) == str:
-            return self.pre_pop + ' to ' + str(self.post_pop) + '\n'
+            return self.pre_pop + ' to ' + str(self.post_pop)
         else:
-            return str(self.pre_pop) + ' to ' + str(self.post_pop) + '\n'
+            return str(self.pre_pop) + ' to ' + str(self.post_pop)
     def get_properties(self):
+        """Get the and make them suitable for pickling"""
         properties = {'name': self.get_name(),
                       'init_parameters': self.init_parameters,
                       'pre_cell_targets': self.pre_cell_targets}
-        return {self: properties}
+        properties['init_parameters']['post_pop'] = str(properties['init_parameters']['post_pop'])
+        properties['init_parameters']['self'] = str(properties['init_parameters']['self'])
+        try:
+             properties['init_parameters']['pre_pop'] = str(properties['init_parameters']['pre_pop'])
+        except:
+            pass
+        return {self.get_name(): properties}
 
 class tmgsynConnection(GenConnection):
 
