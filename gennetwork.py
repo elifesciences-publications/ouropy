@@ -67,7 +67,7 @@ class GenNetwork(object):
         >>> GenNetwork([GranuleCell, MossyCell], [500,15])
         Create a network with 500 granule cells and 15 mossy cells.
         """
-        
+
         self.populations = []
         self.connections = []
         if celltypes is None:
@@ -78,11 +78,6 @@ class GenNetwork(object):
 
         for idx, cell_type in enumerate(celltypes):
             self.populations.append(Population(cell_type, cellnums[idx], self))
-
-    def get_properties(self):
-        properties = {'populations': [x.get_properties() for x in self.populations],
-                      'init_params': self.init_params}
-        return properties
 
     def mk_population(self, cell_type, n_cells):
         """Initialize instance empty or with cell populations.
@@ -131,7 +126,12 @@ class GenNetwork(object):
         """
         for pop in self.populations:
             pop.write_aps(directory=directory)
-            
+
+    def get_properties(self):
+        properties = {'populations': [x.get_properties() for x in self.populations],
+                      'init_params': self.init_params}
+        return properties
+
     def shelve_network(self, directory=None, file_name=None):
         """Saves the complete network information to a python shelve file.
         Goes down from the network to populations to connections and uses their
@@ -144,13 +144,13 @@ class GenNetwork(object):
             file_name = str(self) + '_' + local_time_as_string
         if not os.path.isdir(directory):
             os.mkdir(directory)
-        
+
         full_file_path = directory + "\\" + file_name
         if os.path.isfile(full_file_path):
-            raise ValueError("The file already exists.\n" + 
+            raise ValueError("The file already exists.\n" +
                              "shelve_network does not overwrite files.")
-        
-        curr_shelve = shelve.open(full_file_path, flag ='n')
+
+        curr_shelve = shelve.open(full_file_path, flag='n')
         curr_shelve[str(self)] = self.get_properties()
         curr_shelve.close()
         return 1
@@ -205,6 +205,7 @@ class Population(object):
         self.cells = []
         self.connections = []
         self.VClamps = []
+        self.VClamps_i = []
         self.VRecords = []
         if cell_type and n_cells:
             self.make_cells(cell_type, n_cells)
@@ -214,6 +215,10 @@ class Population(object):
         for x in cells:
             clamp = self.cells[x]._SEClamp(dur1=dur1, amp1=amp1, rs=rs)
             self.VClamps.append(clamp)
+            curr_vec = h.Vector()
+            curr_vec.record(clamp._ref_i)
+            self.Vclamps_i = curr_vec
+            
 
     def voltage_recording(self, cells):
         for x in cells:
@@ -354,7 +359,8 @@ class Population(object):
                       'connections': [conn.get_properties() for conn in self.connections],
                       'ap_time_stamps': ap_time_stamps,
                       'ap_number': ap_numbers,
-                      'v_records': [x.as_numpy() for x in self.VRecords]}
+                      'v_records': [x.as_numpy() for x in self.VRecords],
+                      'VClamps_i': [x.as_numpy() for x in self.VClamps_i]}
 
         properties
         return properties
@@ -377,19 +383,23 @@ class Population(object):
             self.i = 0
             raise StopIteration()
 
+
 class GenConnection(object):
     def __init__(self):
         pass
+
     def get_description(self):
         """Return a descriptive string for the connection"""
         name = self.pre_pop.name + ' to ' + self.post_pop.name + '\n'
         pre_cell_targets = '\n'.join([str(x) for x in self.pre_cell_targets])
         return name + pre_cell_targets
+
     def get_name(self):
         if type(self.pre_pop) == str:
             return self.pre_pop + ' to ' + str(self.post_pop)
         else:
             return str(self.pre_pop) + ' to ' + str(self.post_pop)
+
     def get_properties(self):
         """Get the and make them suitable for pickling"""
         properties = {'name': self.get_name(),
@@ -403,10 +413,12 @@ class GenConnection(object):
             pass
         return {self.get_name(): properties}
 
+
 class tmgsynConnection(GenConnection):
 
-    def __init__(self, pre_pop, post_pop, target_pool, target_segs,
-                divergence, tau_1, tau_facil, U, tau_rec, e, thr, delay, weight):
+    def __init__(self, pre_pop, post_pop,
+                 target_pool, target_segs, divergence,
+                 tau_1, tau_facil, U, tau_rec, e, thr, delay, weight):
         """Create a connection with tmgsyn as published by Tsodyks, Pawelzik &
         Markram, 1998.
         The tmgsyn is a dynamic three state implicit resource synapse model.
@@ -477,19 +489,19 @@ class tmgsynConnection(GenConnection):
         pre_cell_target = []
         synapses = []
         netcons = []
-    
+
         for idx, curr_cell_pos in enumerate(pre_pop_pos):
-    
+
             curr_dist = []
             for post_cell_pos in post_pop_pos:
-                curr_dist.append(euclidian_dist(curr_cell_pos,post_cell_pos))
-                
+                curr_dist.append(euclidian_dist(curr_cell_pos, post_cell_pos))
+
             sort_idc = np.argsort(curr_dist)
             closest_cells = sort_idc[0:target_pool]
-            picked_cells = np.random.choice(closest_cells, divergence, replace = False)
+            picked_cells = np.random.choice(closest_cells, divergence, replace=False)
             pre_cell_target.append(picked_cells)
             for target_cell in picked_cells:
-                
+
                 curr_syns = []
                 curr_netcons = []
 
@@ -507,10 +519,11 @@ class tmgsynConnection(GenConnection):
                     curr_netcons.append(curr_netcon)
                     netcons.append(curr_netcons)
                     synapses.append(curr_syns)
-    
+
         self.netcons = netcons
         self.pre_cell_targets = np.array(pre_cell_target)
         self.synapses = synapses
+
 
 class Exp2SynConnection(GenConnection):
     """
@@ -543,7 +556,7 @@ class Exp2SynConnection(GenConnection):
             curr_dist = []
             for post_cell_pos in post_pop_pos:
                 curr_dist.append(euclidian_dist(curr_cell_pos,post_cell_pos))
-                
+
             sort_idc = np.argsort(curr_dist)
             closest_cells = sort_idc[0:target_pool]
             picked_cells = np.random.choice(closest_cells, divergence, replace = False)
