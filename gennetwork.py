@@ -120,13 +120,24 @@ class GenNetwork(object):
         h.tstop = tstop
         h.run()
 
-    def write_network_data(self, directory=''):
-        """
-        Writes the spike counters
-        """
-        for pop in self.populations:
-            pop.write_aps(directory=directory)
+    def plot_aps(self):
+        fig = plt.figure()
+        for idx, pop in enumerate(self.populations):
+            cells = []
+            for ap_count in pop.ap_counters:
+                cells.append(ap_count[0].as_numpy())
+            # Workaround for matplotlib bug. plt.eventplot throws error when first
+            # element empty
+            if not np.array(cells[0]).any():
+                cells[0] = np.array([0], dtype=float)
+            
+            plt.subplot(4,1,idx+1)
+            plt.eventplot(cells)
+            plt.xlim((0,200))
+        return fig
+            
 
+    
     def get_properties(self):
         properties = {'populations': [x.get_properties() for x in self.populations],
                       'init_params': self.init_params}
