@@ -121,7 +121,7 @@ class GenNetwork(object):
         h.run()
 
     def plot_aps(self):
-        fig = plt.figure()
+        fig = plt.figure(figsize = (8.27, 11.69))
         for idx, pop in enumerate(self.populations):
             cells = []
             for ap_count in pop.ap_counters:
@@ -130,14 +130,31 @@ class GenNetwork(object):
             # element empty
             if not np.array(cells[0]).any():
                 cells[0] = np.array([0], dtype=float)
-            
+
             plt.subplot(4,1,idx+1)
             plt.eventplot(cells)
+            plt.ylabel(str(pop)+ '\n' + str(pop.perc_active_cells())[0:4] + '% active')
             plt.xlim((0,200))
+        plt.xlabel("time (ms)")
         return fig
-            
-
     
+    def save_ap_fig(self, fig, directory=None, file_name=None):
+        if not directory:
+            directory = os.getcwd()
+        if not file_name:
+            local_time_as_string = '_'.join(time.asctime(time.localtime()).split(' '))
+            file_name = str(self) + '_' + local_time_as_string
+        if not os.path.isdir(directory):
+            os.mkdir(directory)
+
+        full_file_path = directory + "\\" + file_name
+        if os.path.isfile(full_file_path):
+            raise ValueError("The file already exists.\n" +
+                             "shelve_network does not overwrite files.")
+        
+        fig.savefig(full_file_path + ".pdf", dpi = 300, format ='pdf')
+        fig.savefig(full_file_path + ".eps", dpi = 300, format ='eps')
+
     def get_properties(self):
         properties = {'populations': [x.get_properties() for x in self.populations],
                       'init_params': self.init_params}
@@ -228,7 +245,7 @@ class Population(object):
             self.VClamps.append(clamp)
             curr_vec = h.Vector()
             curr_vec.record(clamp._ref_i)
-            self.Vclamps_i = curr_vec
+            self.VClamps_i.append(curr_vec)
             
 
     def voltage_recording(self, cells):
