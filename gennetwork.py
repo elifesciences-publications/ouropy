@@ -120,7 +120,7 @@ class GenNetwork(object):
         h.tstop = tstop
         h.run()
 
-    def plot_aps(self):
+    def plot_aps(self, time = 200):
         fig = plt.figure(figsize = (8.27, 11.69))
         for idx, pop in enumerate(self.populations):
             cells = []
@@ -134,7 +134,7 @@ class GenNetwork(object):
             plt.subplot(4,1,idx+1)
             plt.eventplot(cells)
             plt.ylabel(str(pop)+ '\n' + str(pop.perc_active_cells())[0:4] + '% active')
-            plt.xlim((0,200))
+            plt.xlim((0,time))
         plt.xlabel("time (ms)")
         return fig
     
