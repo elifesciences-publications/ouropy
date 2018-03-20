@@ -572,7 +572,9 @@ class Exp2SynConnection(GenConnection):
         post_pop.add_connection(self)
         pre_pop_rad = (np.arange(pre_pop.get_cell_number(),dtype=float) / pre_pop.get_cell_number()) * (2*np.pi)
         post_pop_rad = (np.arange(post_pop.get_cell_number(), dtype=float) / post_pop.get_cell_number()) * (2*np.pi)
-        
+        self.pre_pop_rad = pre_pop_rad
+        self.post_pop_rad = post_pop_rad
+
         pre_pop_pos = pos(pre_pop_rad)
         post_pop_pos = pos(post_pop_rad)
         pre_cell_target = []
