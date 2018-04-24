@@ -137,7 +137,7 @@ class GenNetwork(object):
             plt.xlim((0,time))
         plt.xlabel("time (ms)")
         return fig
-    
+
     def save_ap_fig(self, fig, directory=None, file_name=None):
         if not directory:
             directory = os.getcwd()
@@ -860,7 +860,7 @@ class PerforantPathPoissonTmgsyn(GenConnection):
         post_pop.add_connection(self)
         synapses = []
         netcons = []
-
+        t_pattern = list(t_pattern) # nrn does not like np.ndarrays?
         target_cells = post_pop[spat_pattern]
         self.pre_pop = 'Implicit'
         self.post_pop = post_pop
