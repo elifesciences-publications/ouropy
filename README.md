@@ -14,4 +14,4 @@ This project is published under a [GPL v2](http://www.gnu.org/licenses/gpl-2.0.h
 For a full copy of the license refer to the file GPLv2-LICENSE.md
 
 # Author
-Daniel Müller, Laboratory of experimental epileptology Bonn
+Daniel Müller, Institute of Experimental Epileptology and Cognition Research
