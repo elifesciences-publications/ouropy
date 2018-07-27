@@ -772,7 +772,6 @@ class tmgsynConnection_old(GenConnection):
         netcons = []
 
         for idx, curr_cell_pos in enumerate(pre_pop_pos):
-
             curr_dist = []
             for post_cell_pos in post_pop_pos:
                 curr_dist.append(euclidian_dist(curr_cell_pos, post_cell_pos))
