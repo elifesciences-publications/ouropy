@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-This module implements the GenNeuron object, a contructor for neurons.
-Supports construction but is best used when inherited.
+This module implements the GenNetwork class, which implements generic network
+logic.
 """
 
 from neuron import h
