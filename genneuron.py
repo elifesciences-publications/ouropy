@@ -304,7 +304,7 @@ class GenNeuron(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         if not hasattr(self, 'i'):
             self.i = 0
         if self.i < (len(self.all_secs)):
@@ -314,3 +314,6 @@ class GenNeuron(object):
         else:
             self.i = 0
             raise StopIteration()
+
+    def next(self):
+        return self.__next__()

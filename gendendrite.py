@@ -116,7 +116,7 @@ class GenDendrite(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         if not self.secs:
             raise StandardError("No sections created yet")
         if self._i < (len(self.secs)):
@@ -126,6 +126,9 @@ class GenDendrite(object):
         else:
             self._i = 0
             raise StopIteration()
+
+    def next(self):
+        return self.__next__()
 
     def __getitem__(self, key):
         if type(key) == int:

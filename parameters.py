@@ -66,7 +66,7 @@ class ParameterSet(list):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         if self._i < (len(self.param_list)):
             i = self._i
             self._i += 1
@@ -75,6 +75,8 @@ class ParameterSet(list):
             self._i = 0
             raise StopIteration()
 
+    def next(self):
+        return self.__next__()
 
 def read_parameters(path):
 

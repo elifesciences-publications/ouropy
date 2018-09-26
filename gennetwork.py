@@ -429,7 +429,7 @@ class Population(object):
     def __getitem__(self, item):
         return self.cells[item]
 
-    def next(self):
+    def __next__(self):
         if self.i < (len(self.cells)):
             i = self.i
             self.i += 1
@@ -437,6 +437,9 @@ class Population(object):
         else:
             self.i = 0
             raise StopIteration()
+    
+    def next(self):
+        return self.__next__()
 
 
 class GenConnection(object):
