@@ -170,6 +170,285 @@ class tmgsynConnection(GenConnection):
         self.synapses = synapses
 
 
+class pyr2pyrConnCA3(GenConnection):
+
+    def __init__(self, pre_pop, post_pop,
+                 target_pool, target_segs, divergence, thr, weight,
+                 initW, Max, Min, Delay, Ratio, ConPattern, Lambda1, Lambda2,
+                 threshold1, threshold2, tauD1, d1, tauD2, d2, tauF, f, erev,
+                 bACH, aDA, bDA, wACH, Alpha_ampa, Beta_ampa, Cdur_ampa,
+                 gbar_ampa, Alpha_nmda, Beta_nmda, Cdur_nmda, gbar_nmda,
+                 GaussA):
+        """TODO DOC
+
+        Parameters
+        ----------
+        pre_pop - gennetwork.Population
+            The presynaptic population
+        post_pop - gennetwork.Population
+            the postsynaptic population
+        target_pool - int
+            the number of cells in the target pool
+        target_segs - str
+            the name of the segments that are possible synaptic targets at the
+            postsynaptic population
+        divergence - int
+            divergence in absolute terms, that is the number of synapses each
+            presynaptic cell forms
+        tau_1 - numeric
+            the time constant of synaptic decay. conforms to the transition
+            from the active to the inactive resource state. units of time as in
+            neuron standard units
+        tau_facil - numeric
+            the time constant of facilitation decay. this essentially creates
+            the frequency dependence. set to 0 for no facilitation.
+        U - numeric
+            maximum of postsynaptic response. has to be considered together
+            with the weight from the netcon.
+        tau_rec - numeric
+            time constant of recovery from inactive for recovered state.
+            gives depression since inactive resources do not contribute to
+            postsynaptic signal. set to 0 for no depression.
+        e - numeric
+            equilibrium potential of the postsynaptic conductance
+        thr - numeric
+            threshold for synaptic event at the presynaptic source
+        delay - numeric
+            delay between presynaptic signal and onset of postsynaptic signal
+        weight - numeric
+            weight for the netcon object connecting source and target
+
+        Returns
+        -------
+        None
+
+        Use Cases
+        ---------
+        >>> tmgsynConnection(nw.population[0], nw.population[1],
+                             3, 'prox', 1, 6.0, 0, 0.04, 0, 0, 10, 3, 0)
+        A non-facilitating, non-depressing excitatory connection.
+
+        """
+        self.init_parameters = locals()
+        self.pre_pop = pre_pop
+        self.post_pop = post_pop
+        pre_pop.add_connection(self)
+        post_pop.add_connection(self)
+        pre_pop_rad = (np.arange(pre_pop.get_cell_number(), dtype=float) /
+                       pre_pop.get_cell_number()) * (2*np.pi)
+        post_pop_rad = (np.arange(post_pop.get_cell_number(), dtype=float) /
+                        post_pop.get_cell_number()) * (2*np.pi)
+
+        pre_pop_pos = pos(pre_pop_rad)
+        post_pop_pos = pos(post_pop_rad)
+        pre_cell_target = []
+        synapses = []
+        netcons = []
+        conductances = []
+
+        for idx, curr_cell_pos in enumerate(pre_pop_pos):
+
+            curr_dist = []
+            for post_cell_pos in post_pop_pos:
+                curr_dist.append(euclidian_dist(curr_cell_pos, post_cell_pos))
+
+            sort_idc = np.argsort(curr_dist)
+            closest_cells = sort_idc[0:target_pool]
+            picked_cells = np.random.choice(closest_cells,
+                                            divergence,
+                                            replace=False)
+            pre_cell_target.append(picked_cells)
+            for tar_c in picked_cells:
+
+                curr_syns = []
+                curr_netcons = []
+                curr_conductances = []
+
+                curr_syn = h.pyr2pyr(post_pop[tar_c].soma(0.5))
+                curr_syn.initW = initW
+                curr_syn.Wmax = Max
+                curr_syn.Wmin = Min
+                curr_syn.lambda1 = Lambda1
+                curr_syn.lambda2 = Lambda2
+                curr_syn.threshold1 = threshold1
+                curr_syn.threshold2 = threshold2
+                curr_syn.tauD1 = tauD1
+                curr_syn.d1 = d1
+                curr_syn.tauD2 = tauD2
+                curr_syn.d2 = d2
+                curr_syn.tauF = tauF
+                curr_syn.f = f
+                curr_syn.Erev_ampa = erev
+                curr_syn.Erev_nmda = erev
+                curr_syn.bACH = bACH
+                curr_syn.aDA = aDA
+                curr_syn.bDA = bDA
+                curr_syn.wACH = wACH
+                curr_syn.AlphaTmax_ampa = Alpha_ampa
+                curr_syn.Beta_ampa = Beta_ampa
+                curr_syn.Cdur_ampa = Cdur_ampa
+                curr_syn.gbar_ampa = gbar_ampa
+                curr_syn.AlphaTmax_nmda = Alpha_nmda
+                curr_syn.Beta_nmda = Beta_nmda
+                curr_syn.Cdur_nmda = Cdur_nmda
+                curr_syn.gbar_nmda = gbar_nmda
+
+                curr_syns.append(curr_syn)
+                curr_netcon = h.NetCon(pre_pop[idx].soma(0.5)._ref_v,
+                                       curr_syn, thr, Delay,
+                                       weight, sec=pre_pop[idx].soma)
+                #curr_gvec = h.Vector()
+                #curr_gvec.record(curr_syn._ref_g)
+                #curr_conductances.append(curr_gvec)
+                curr_netcons.append(curr_netcon)
+                netcons.append(curr_netcons)
+                synapses.append(curr_syns)
+            conductances.append(curr_conductances)
+        self.conductances = conductances
+        self.netcons = netcons
+        self.pre_cell_targets = np.array(pre_cell_target)
+        self.synapses = synapses
+        
+class inter2pyrConnCA3(GenConnection):
+
+    def __init__(self, pre_pop, post_pop,
+                 target_pool, target_segs, divergence, thr, weight,
+                 initW, Max, Min, Delay, Ratio, ConPattern, Lambda1, Lambda2,
+                 threshold1, threshold2, tauD1, d1, tauD2, d2, tauF, f, erev,
+                 bACH, aDA, bDA, wACH, Alpha_gabaa, Beta_gabaa, Cdur_gabaa,
+                 gbar_gabaa, Alpha_gabab, Beta_gabab, Cdur_gabab, gbar_gabab,
+                 GaussA):
+        """TODO DOC
+
+        Parameters
+        ----------
+        pre_pop - gennetwork.Population
+            The presynaptic population
+        post_pop - gennetwork.Population
+            the postsynaptic population
+        target_pool - int
+            the number of cells in the target pool
+        target_segs - str
+            the name of the segments that are possible synaptic targets at the
+            postsynaptic population
+        divergence - int
+            divergence in absolute terms, that is the number of synapses each
+            presynaptic cell forms
+        tau_1 - numeric
+            the time constant of synaptic decay. conforms to the transition
+            from the active to the inactive resource state. units of time as in
+            neuron standard units
+        tau_facil - numeric
+            the time constant of facilitation decay. this essentially creates
+            the frequency dependence. set to 0 for no facilitation.
+        U - numeric
+            maximum of postsynaptic response. has to be considered together
+            with the weight from the netcon.
+        tau_rec - numeric
+            time constant of recovery from inactive for recovered state.
+            gives depression since inactive resources do not contribute to
+            postsynaptic signal. set to 0 for no depression.
+        e - numeric
+            equilibrium potential of the postsynaptic conductance
+        thr - numeric
+            threshold for synaptic event at the presynaptic source
+        delay - numeric
+            delay between presynaptic signal and onset of postsynaptic signal
+        weight - numeric
+            weight for the netcon object connecting source and target
+
+        Returns
+        -------
+        None
+
+        Use Cases
+        ---------
+        >>> tmgsynConnection(nw.population[0], nw.population[1],
+                             3, 'prox', 1, 6.0, 0, 0.04, 0, 0, 10, 3, 0)
+        A non-facilitating, non-depressing excitatory connection.
+
+        """
+        self.init_parameters = locals()
+        self.pre_pop = pre_pop
+        self.post_pop = post_pop
+        pre_pop.add_connection(self)
+        post_pop.add_connection(self)
+        pre_pop_rad = (np.arange(pre_pop.get_cell_number(), dtype=float) /
+                       pre_pop.get_cell_number()) * (2*np.pi)
+        post_pop_rad = (np.arange(post_pop.get_cell_number(), dtype=float) /
+                        post_pop.get_cell_number()) * (2*np.pi)
+
+        pre_pop_pos = pos(pre_pop_rad)
+        post_pop_pos = pos(post_pop_rad)
+        pre_cell_target = []
+        synapses = []
+        netcons = []
+        conductances = []
+
+        for idx, curr_cell_pos in enumerate(pre_pop_pos):
+
+            curr_dist = []
+            for post_cell_pos in post_pop_pos:
+                curr_dist.append(euclidian_dist(curr_cell_pos, post_cell_pos))
+
+            sort_idc = np.argsort(curr_dist)
+            closest_cells = sort_idc[0:target_pool]
+            picked_cells = np.random.choice(closest_cells,
+                                            divergence,
+                                            replace=False)
+            pre_cell_target.append(picked_cells)
+            for tar_c in picked_cells:
+
+                curr_syns = []
+                curr_netcons = []
+                curr_conductances = []
+
+                curr_syn = h.inter2pyr(post_pop[tar_c].soma(0.5))
+                curr_syn.initW = initW
+                curr_syn.Wmax = Max
+                curr_syn.Wmin = Min
+                curr_syn.lambda1 = Lambda1
+                curr_syn.lambda2 = Lambda2
+                curr_syn.threshold1 = threshold1
+                curr_syn.threshold2 = threshold2
+                curr_syn.tauD1 = tauD1
+                curr_syn.d1 = d1
+                curr_syn.tauD2 = tauD2
+                curr_syn.d2 = d2
+                curr_syn.tauF = tauF
+                curr_syn.f = f
+                curr_syn.Erev_gabaa = erev
+                curr_syn.Erev_gabab = erev
+                curr_syn.bACH = bACH
+                curr_syn.aDA = aDA
+                curr_syn.bDA = bDA
+                curr_syn.wACH = wACH
+                curr_syn.AlphaTmax_gabaa = Alpha_gabaa
+                curr_syn.Beta_gabaa = Beta_gabaa
+                curr_syn.Cdur_gabaa = Cdur_gabaa
+                curr_syn.gbar_gabaa = gbar_gabaa
+                curr_syn.AlphaTmax_gabab = Alpha_gabab
+                curr_syn.Beta_gabab = Beta_gabab
+                curr_syn.Cdur_gabab = Cdur_gabab
+                curr_syn.gbar_gabab = gbar_gabab
+
+                curr_syns.append(curr_syn)
+                curr_netcon = h.NetCon(pre_pop[idx].soma(0.5)._ref_v,
+                                       curr_syn, thr, Delay,
+                                       weight, sec=pre_pop[idx].soma)
+                #curr_gvec = h.Vector()
+                #curr_gvec.record(curr_syn._ref_g)
+                #curr_conductances.append(curr_gvec)
+                curr_netcons.append(curr_netcon)
+                netcons.append(curr_netcons)
+                synapses.append(curr_syns)
+            conductances.append(curr_conductances)
+        self.conductances = conductances
+        self.netcons = netcons
+        self.pre_cell_targets = np.array(pre_cell_target)
+        self.synapses = synapses
+
+
 class tmgsynConnectionExponentialProb(GenConnection):
 
     def __init__(self, pre_pop, post_pop,

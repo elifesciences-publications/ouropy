@@ -886,6 +886,14 @@ class Population(object):
 
         self.cells = np.array(self.cells, dtype=object)
 
+    def mk_2dtopology(self, width, height):
+        loc_matrix = np.ndarray(self.get_cell_number(), 2)
+        aspect = width/height
+        n_cells = self.get_cell_number()
+        n_height = n_cells / aspect
+        n_width
+        
+
     def get_cell_number(self):
         """Return the number of cells"""
         return len(self.cells)
