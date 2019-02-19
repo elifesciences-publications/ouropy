@@ -224,9 +224,7 @@ class pyr2pyrConnCA3(GenConnection):
 
         Use Cases
         ---------
-        >>> tmgsynConnection(nw.population[0], nw.population[1],
-                             3, 'prox', 1, 6.0, 0, 0.04, 0, 0, 10, 3, 0)
-        A non-facilitating, non-depressing excitatory connection.
+        >>>
 
         """
         self.init_parameters = locals()

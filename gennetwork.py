@@ -194,9 +194,6 @@ class GenNetwork(object):
         return str(self.__class__).split("'")[1]
 
 
-
-
-
 class GenConnection(object):
     def __init__(self):
         pass
@@ -886,12 +883,65 @@ class Population(object):
 
         self.cells = np.array(self.cells, dtype=object)
 
-    def mk_2dtopology(self, width, height):
-        loc_matrix = np.ndarray(self.get_cell_number(), 2)
-        aspect = width/height
-        n_cells = self.get_cell_number()
-        n_height = n_cells / aspect
-        n_width
+    def mk_2dtopology(self, dimx, dimy):
+        """Distribute the cells of the population in 2D space.
+        The mapping between each cell and its location is stored in
+        Population.topology.
+        Creating topologies multiple times overwrites previously created
+        topologies.
+        
+        
+        Parameters
+        ----------
+        dimx - range
+            range of the first dimension
+        dimy - range
+            range of the second dimension
+
+        Returns
+        -------
+        None
+
+        Use Cases
+        ---------
+        >>> 
+        """
+        pass
+        
+    def mk_3dtopology(self, dimx, dimy, dimz):
+        """Distribute the cells of the population in 2D space.
+        The mapping between each cell and its location is stored in
+        Population.topology.
+        Creating topologies multiple times overwrites previously created
+        topologies.
+        
+        
+        Parameters
+        ----------
+        dimx - range
+            range of the first dimension
+        dimy - range
+            range of the second dimension
+        dimz - range
+            range of the third dimension
+
+        Returns
+        -------
+        None
+
+        Use Cases
+        ---------
+        >>> 
+        """
+        dimx = np.arange(dimx[0],dimx[1],dimx[2])
+        dimy = np.arange(dimy[0],dimy[1],dimy[2])
+        dimz = np.arange(dimz[0],dimz[1],dimz[2])
+        self.topology = []
+        for z in dimz:
+            for y in dimy:
+                for x in dimx:
+                    curr_tuple = (x,y,z)
+                    self.topology.append(curr_tuple)
         
 
     def get_cell_number(self):
