@@ -1,3 +1,5 @@
+### This code is associated with the paper from Braganza et al., "Quantitative properties of a feedback circuit predict frequency-dependent pattern separation". eLife, 2020. http://dx.doi.org/10.7554/eLife.53148
+
 # ouropy
 
 ouropy is a generic wrapper of [NEURON](https://www.neuron.yale.edu/neuron/), intended to simplify network modeling. When working in native NEURON, the logical unit is the section.
